@@ -59,13 +59,23 @@ class TrainingDataCreator:
             path_outcar_files.extend(glob.glob(os.path.join(root, "OUTCAR")))
         # todo: everything
 
-    def create_CE_training_datapoint_withoutTS(self, path: str) -> tuple[Atoms, float]:
-        atoms = ase_read(path)
+    def create_CE_training_datapoint_withoutTS(self, path: str, path_original_structure: str = __path__) -> tuple[Atoms, float]:
+        atoms = ase_read(path, index=-1)
         e_ref, o_count = self.reference_state_energy(atoms)
         h_o_m_per_site = (e_ref + atoms[-1].get_potential_energy()) / (2 * o_count)
         return atoms, h_o_m_per_site
 
-    def create_CE_training_datapoint_transition_state(self, path_final: str, no_of_steps: int=5) -> tuple[Atoms, float]:
+    def create_CE_training_datapoint_transition_state(self, path_final: str, no_of_steps: int=6) -> tuple[Atoms, float]: 
+        """
+        Create a CE training data point for a transition state.
+        This function identifies the jumping atom in the transition state, creates an anchor structure,
+        and calculates the heat of mixing per site.
+        Parameters:
+        path_final (str): The path to the final OUTCAR file.
+        no_of_steps (int): The number of transition steps.
+        Returns:
+        tuple: A tuple containing the anchor structure and the heat of mixing per site.
+        """      
         path_without_run_final = '/'.join(path_final.split('/')[0:-1])
         atoms_init = ase_read(path_without_run_final + '/OUTCAR_initial_image')
         atoms_final = ase_read(path_without_run_final + '/OUTCAR_final_image')
@@ -76,7 +86,15 @@ class TrainingDataCreator:
         return atoms_anchor, h_o_m_per_site
 
     def reference_state_energy(self, atoms: Atoms) -> tuple[float, int]:
-        # calculating the structural heat of mixing
+        """
+        Calculate the reference state energy (structural heat of mixing) for a given atomic structure.
+        This function computes the reference state energy based on the number of Li and O atoms in the structure.
+        It uses the reference energies of LiNiO2 and NiO2 per O2 unit to calculate the energy.
+        Parameters:
+        atoms (ase.Atoms): The atomic structure for which to calculate the reference state energy.
+        Returns:
+        tuple: A tuple containing the reference state energy and the number of O atoms in the structure.
+        """
         li_count = atoms.get_chemical_symbols().count("Li") # +1 for the jumping Li
         o_count  = atoms.get_chemical_symbols().count("O")
         e_ref = -li_count * self.e_ref_LiNiO2_per_O2 - (o_count/2-li_count) * self.e_ref_NiO2_per_O2
@@ -109,11 +127,11 @@ class TrainingDataCreator:
             except:
                 paths_not_readable.append(path)
         if len(paths_not_readable) >= len(paths_outcar) / 2:
-            raise IOError(f"Ignore {'/'.join(paths_not_readable[0].split('/')[0:-1])}\t  ---> could not read half of the OUTCARs!")
+            raise IOError(TrainingDataCreator.red_string_output(f"Ignored {'/'.join(paths_not_readable[0].split('/')[0:-1])}\t  ---> could not read half of the OUTCARs!"))
         # For "Proper" paths, there should be maximum in energy !between! initial and final paths... ignore those where this is not the case
         index_highest_energy = energies.index(max(energies))
         if index_highest_energy == 0 or index_highest_energy == len(paths_outcar) - 1:
-            raise ValueError(f"Ignore {'/'.join(paths_outcar[0].split('/')[0:-1])}\n  ---> image {index_highest_energy} has highest energy!")
+            raise ValueError(TrainingDataCreator.red_string_output(f"Ignore {'/'.join(paths_outcar[0].split('/')[0:-1])}\n  ---> image {index_highest_energy} has highest energy!"))
         return max(energies)
 
     #             #using one structure to calc heat of mixing
@@ -154,7 +172,7 @@ class TrainingDataCreator:
         paths_to_try = []
         # creation of expected paths
         paths_to_try.append(path_without_run_final + '/OUTCAR_initial_image')
-        for i in range(1, no_of_steps):
+        for i in range(1, no_of_steps): #todo: umschreiben zu glob.glob ?
             if i < 10:
                 paths_to_try[i] = f"{abs_path}/0{i}/OUTCAR"
             else:
@@ -255,6 +273,17 @@ class TrainingDataCreator:
         atoms_anchor.append(atoms_final[i])
         return atoms_anchor
 
+    @staticmethod
+    def red_string_output(string: str) -> str:
+        """
+        Make the string red in the terminal output.
+        Parameters:
+        string (str): The string to be colored.
+        Returns:
+        str: The colored string.
+        """
+        return f"\33[91m{string}\33[0m"
+    
     @property
     def e_ref_LiNiO2_per_O2(self):
         return self._e_ref_LiNiO2_per_O2
