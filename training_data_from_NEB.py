@@ -40,7 +40,7 @@ class TrainingDataCreator:
             glob.glob("/nfshome/sadowski/work/LiNiO2_data_base_Sabrina/DFT_database/NEBs_Marcel/0*random*/02_odh/image*/02_scan/*final/OUTCAR"),
             glob.glob("/nfshome/sadowski/work/LiNiO2_data_base_Sabrina/DFT_database/NEBs_Marcel/0*random*/03_tsh/image*/02_scan/*final/OUTCAR"),
             glob.glob("/nfshome/sadowski/work/LiNiO2_data_base_Sabrina/DFT_database/NEBs_Marcel/0*random*/04_double_tsh/image*/02_scan/*final/OUTCAR"),
-            ] #todo markus strukturen und strukturen von neb start und final
+            ] #TODO markus strukturen und strukturen von neb start und final
         return path_outcars_without_TS
 
     @staticmethod
@@ -57,7 +57,7 @@ class TrainingDataCreator:
         path_outcar_files = []
         for root, dirs, files in os.walk(base_folder):
             path_outcar_files.extend(glob.glob(os.path.join(root, "OUTCAR")))
-        # todo: everything
+        # TODO: everything
 
     def create_CE_training_datapoint_withoutTS(self, path: str, path_original_structure: str = __path__) -> tuple[Atoms, float]:
         atoms = ase_read(path, index=-1)
@@ -172,7 +172,7 @@ class TrainingDataCreator:
         paths_to_try = []
         # creation of expected paths
         paths_to_try.append(path_without_run_final + '/OUTCAR_initial_image')
-        for i in range(1, no_of_steps): #todo: umschreiben zu glob.glob ?
+        for i in range(1, no_of_steps): #TODO: umschreiben zu glob.glob ?
             if i < 10:
                 paths_to_try[i] = f"{abs_path}/0{i}/OUTCAR"
             else:
